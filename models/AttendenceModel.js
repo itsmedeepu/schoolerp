@@ -17,10 +17,6 @@ const AttendanceSchema = mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         required: true,
       },
-      name: {
-        type: String,
-        required: true,
-      },
       status: {
         type: String,
         enum: ["Present", "Absent", "Late", "Excused"],

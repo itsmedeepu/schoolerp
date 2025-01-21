@@ -12,9 +12,10 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 const classRoutes = require("./routes/ClassesRoutes");
 const teacherRoutes = require("./routes/TeacherRoutes");
+const studentRoutes = require("./routes/StudentRoutes");
 app.use("/api/v1/school/class", classRoutes);
 app.use("/api/v1/school/teacher", teacherRoutes);
-
+app.use("/api/v1/school/student", studentRoutes);
 // Test route
 app.get("/test", (req, res) => {
   res.status(200).json({ message: "Server running healthy" });

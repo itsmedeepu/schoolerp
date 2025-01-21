@@ -15,9 +15,8 @@ const StudentSchema = mongoose.Schema({
   },
   phone: {
     type: String,
-    required: true,
   },
-  class: {
+  classs: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Class",
     required: true,

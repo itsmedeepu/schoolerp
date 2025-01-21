@@ -4,7 +4,12 @@ const {
   DuplicateError,
   ValidationError,
 } = require("../utils/Errors");
-const { genrateUniqueId, genrateToken } = require("../utils/HelperFunctions");
+const {
+  genrateUniqueId,
+  genrateToken,
+  sendEmail,
+  isValidText,
+} = require("../utils/HelperFunctions");
 const bcrypt = require("bcrypt");
 
 const Login = async (req, res) => {
@@ -25,12 +30,12 @@ const Login = async (req, res) => {
     throw ValidationError(500, "invalid credentials");
   }
 
-  const token = genrateToken(findTeacher.uniqueTeacherId);
+  const token = genrateToken(findTeacher.uniqueTeacherId, "teacher");
   return res.status(200).json({ message: "login sucessfull", data: { token } });
 };
 
 const RegisterTeacher = async (req, res) => {
-  const { name, email, phone, address, password } = req.body;
+  const { name, email, phone, address, password, classes } = req.body;
   if (!name || !email || !phone || !address || !password) {
     throw new ValidationError(500, "one or more feilds required");
   }
@@ -45,6 +50,7 @@ const RegisterTeacher = async (req, res) => {
   const uniqueTeacherId = genrateUniqueId();
 
   const hashedpassword = await bcrypt.hash(password, 10);
+
   const teacher = new TeacherModel({
     name,
     email,
@@ -53,6 +59,9 @@ const RegisterTeacher = async (req, res) => {
     password: hashedpassword,
     uniqueTeacherId,
   });
+  if (classes.length > 0) {
+    teacher.classes = [...classes];
+  }
 
   const saveteacher = await teacher.save();
   return res.status(201).json({ message: "teacher registred sucessfully" });
@@ -147,6 +156,95 @@ const resetPassword = async (req, res) => {
   return res.status(201).json({ message: "password reset sucessfully" });
 };
 
+//otp reset password
+
+const ResetPasswordviaLink = async (req, res) => {
+  //sendmail to the requested user mail id
+  const { email } = req.body;
+  if (!email || email.trim() == "") {
+    throw new ValidationError(500, "email is requried");
+  }
+
+  const findTeacherByEmail = await TeacherModel.findOne({ email });
+  if (!findTeacherByEmail) {
+    throw new NotFoundError(500, "email is invalid");
+  }
+  const token = genrateToken(findTeacherByEmail.uniqueTeacherId, "teacher");
+
+  //send password reset link here
+
+  const data = {
+    senderEmail: findTeacherByEmail.email,
+    token,
+  };
+
+  sendEmail(data);
+
+  return res
+    .status(200)
+    .json({ message: "password reset link sent to email id" });
+  //configure the link here
+};
+
+const GetTeacherByClass = async (req, res) => {
+  const classid = req.params.classid;
+  console.log(classid);
+  if (!classid) {
+    throw new ValidationError(500, "class id is mandatory");
+  }
+
+  const teachers = await TeacherModel.find(
+    { classes: classid },
+    { password: 0 }
+  );
+
+  if (!teachers) {
+    throw new NotFoundError(500, "no teachers present in this class");
+  }
+
+  return res
+    .status(200)
+    .json({ message: "teachers fetched sucessfully", data: { teachers } });
+};
+
+const MapTeacherToClass = async (req, res) => {
+  const { teacheruuid, classes } = req.body;
+  if (!classes || classes.length <= 0)
+    throw new ValidationError(500, "please provide class id");
+
+  const updateclasses = await TeacherModel.updateOne(
+    { uniqueTeacherId: teacheruuid },
+    { $addToSet: { classes: { $each: classes } } },
+    { new: true }
+  );
+
+  return res
+    .status(200)
+    .json({ message: "classes mapped sucessfully", data: updateclasses });
+};
+
+const GetClassesByTeachersId = async (req, res) => {
+  const teacheruuid = req.params.teacheruuid;
+  if (!teacheruuid || !isValidText(teacheruuid)) {
+    throw new ValidationError(500, "teacher id required");
+  }
+  const getclasses = await TeacherModel.findOne(
+    {
+      uniqueTeacherId: teacheruuid,
+    },
+    { classes: 1, _id: 0 }
+  ).populate("classes");
+
+  if (!getclasses) {
+    throw new NotFoundError(500, "no classes assigned to this teacher");
+  }
+
+  return res.status(200).json({
+    message: "classes featched sucessfully",
+    data: getclasses,
+  });
+};
+
 module.exports = {
   RegisterTeacher,
   GetAllTeachers,
@@ -154,4 +252,8 @@ module.exports = {
   updateTeacher,
   resetPassword,
   Login,
+  ResetPasswordviaLink,
+  GetTeacherByClass,
+  GetClassesByTeachersId,
+  MapTeacherToClass,
 };
