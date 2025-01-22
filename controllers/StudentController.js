@@ -1,6 +1,10 @@
 const StudentModel = require("../models/StudentModel");
 const bcrypt = require("bcrypt");
-const { ValidationError, NotFoundError } = require("../utils/Errors");
+const {
+  ValidationError,
+  NotFoundError,
+  DuplicateError,
+} = require("../utils/Errors");
 const {
   isValidText,
   genrateUniqueId,
@@ -17,7 +21,7 @@ const RegisterStudent = async (req, res) => {
     !isValidText(phone) ||
     !isValidText(address)
   ) {
-    throw new ValidationError(500, "all feilds are required");
+    throw new ValidationError(400, "all feilds are required");
   }
   const uniqueStudentId = genrateUniqueId();
   const hashedpassword = await bcrypt.hash(password, 10);
@@ -31,6 +35,11 @@ const RegisterStudent = async (req, res) => {
     address,
     uniqueStudentId,
   });
+
+  const findStudent = await StudentModel.findOne({ email, phone });
+  if (findStudent) {
+    throw new DuplicateError(409, "Student already present");
+  }
   const saveStudent = await student.save();
   return res
     .status(201)
@@ -41,7 +50,7 @@ const UpdateStudentDetails = async (req, res) => {
   const { email, name, classs, address, uniqueStudentId, phone } = req.body;
 
   if (!isValidText(uniqueStudentId)) {
-    throw new ValidationError(500, "unique student id required");
+    throw new ValidationError(400, "unique student id required");
   }
 
   const updateStudent = await StudentModel.findOneAndUpdate(
@@ -51,28 +60,35 @@ const UpdateStudentDetails = async (req, res) => {
   );
 
   return res
-    .status(200)
+    .status(201)
     .json({ message: "student updated sucessfully", data: { updateStudent } });
 };
 
 const StudentLogin = async (req, res) => {
   const { email, password } = req.body;
   if (!isValidText(email) || !isValidText(password)) {
-    throw new ValidationError(500, "all feilds are required");
+    throw new ValidationError(400, "all feilds are required");
   }
 
   const getStudent = await StudentModel.findOne({ email });
   if (!getStudent) {
-    throw new NotFoundError(500, "student not found with this email id");
+    throw new NotFoundError(404, "student not found with this email id");
   }
   const checkpassword = await bcrypt.compare(password, getStudent.password);
   if (!checkpassword) {
     throw new NotFoundError(401, "invalid login details");
   }
-  const token = genrateToken(getStudent.uniqueStudentId, "student");
-  return res
-    .status(200)
-    .json({ message: "user login sucessfull", data: { token } });
+  const acesstoken = genrateToken(getStudent.uniqueStudentId, "student", "5m");
+  const refreshtoken = genrateToken(
+    getStudent.uniqueStudentId,
+    "student",
+    "1d"
+  );
+
+  return res.status(200).json({
+    message: "user login sucessfull",
+    data: { acesstoken, refreshtoken },
+  });
 };
 
 const GetStudents = async (req, res) => {
@@ -99,14 +115,14 @@ const GetStudentsByClass = async (req, res) => {
 const GetStudentsByUniqueId = async (req, res) => {
   const studentuniqueId = req.params.studentuniqueId;
   if (!studentuniqueId) {
-    throw new ValidationError(500, "enter correct student id");
+    throw new ValidationError(400, "enter correct student id");
   }
   const student = await StudentModel.findOne(
     { uniqueStudentId: studentuniqueId },
     { password: 0 }
   );
   if (!student) {
-    throw new NotFoundError(500, "student not found with this id");
+    throw new NotFoundError(400, "student not found with this id");
   }
   res
     .status(200)
@@ -116,11 +132,11 @@ const GetStudentsByUniqueId = async (req, res) => {
 const resetPasswordStudent = async (req, res) => {
   const { email, password } = req.body;
   if (!isValidText(email) || !isValidText(password)) {
-    throw new ValidationError(500, "all feilds are required");
+    throw new ValidationError(400, "all feilds are required");
   }
   const findStudent = await StudentModel.findOne({ email });
   if (!findStudent) {
-    throw new NotFoundError(500, "no student found with this email");
+    throw new NotFoundError(404, "no student found with this email");
   }
 
   const hashedpassword = await bcrypt.hash(password, 10);

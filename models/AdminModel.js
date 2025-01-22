@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
-const StudentSchema = mongoose.Schema({
-  uniqueStudentId: {
+const AdminSchema = mongoose.Schema({
+  uniqueAdminId: {
     type: String,
     required: true,
   },
@@ -15,10 +15,6 @@ const StudentSchema = mongoose.Schema({
   },
   phone: {
     type: String,
-  },
-  classs: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Class",
     required: true,
   },
   photo: {
@@ -36,9 +32,9 @@ const StudentSchema = mongoose.Schema({
   role: {
     type: String,
     enum: ["admin", "teacher", "student"],
-    default: "student",
+    default: "admin",
   },
 });
 
-const StudentModel = mongoose.model("Student", StudentSchema);
-module.exports = StudentModel;
+const AdminModel = mongoose.model("Admin", AdminSchema);
+module.exports = AdminModel;

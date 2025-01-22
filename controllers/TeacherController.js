@@ -15,36 +15,47 @@ const bcrypt = require("bcrypt");
 const Login = async (req, res) => {
   const { email, password } = req.body;
   if (!email || email.trim() === "") {
-    throw new ValidationError(500, "email is required");
+    throw new ValidationError(400, "email is required");
   }
   if (!password || password.trim() === "") {
-    throw new ValidationError(500, "password is required");
+    throw new ValidationError(400, "password is required");
   }
 
   const findTeacher = await TeacherModel.findOne({ email });
   if (!email) {
-    throw new ValidationError(500, "invalid details");
+    throw new ValidationError(400, "invalid details");
   }
   const checkPassword = await bcrypt.compare(password, findTeacher.password);
   if (!checkPassword) {
-    throw ValidationError(500, "invalid credentials");
+    throw ValidationError(401, "invalid credentials");
   }
 
-  const token = genrateToken(findTeacher.uniqueTeacherId, "teacher");
-  return res.status(200).json({ message: "login sucessfull", data: { token } });
+  const accesstoken = genrateToken(
+    findTeacher.uniqueTeacherId,
+    "teacher",
+    "5m"
+  );
+  const refreshtoken = genrateToken(
+    findTeacher.uniqueTeacherId,
+    "teacher",
+    "1d"
+  );
+  return res
+    .status(200)
+    .json({ message: "login sucessfull", data: { accesstoken, refreshtoken } });
 };
 
 const RegisterTeacher = async (req, res) => {
   const { name, email, phone, address, password, classes } = req.body;
   if (!name || !email || !phone || !address || !password) {
-    throw new ValidationError(500, "one or more feilds required");
+    throw new ValidationError(400, "one or more feilds required");
   }
 
   const findteacher = await TeacherModel.findOne({
     $or: [{ email: email }, { phone: phone }],
   });
   if (findteacher) {
-    throw new DuplicateError(500, "teacher already exists with this details");
+    throw new DuplicateError(409, "teacher already exists with this details");
   }
   //generate new uuuid
   const uniqueTeacherId = genrateUniqueId();
@@ -81,7 +92,7 @@ const GetTeacherById = async (req, res) => {
     { password: 0 }
   );
   if (!teacher) {
-    throw new NotFoundError(500, "teacher not found with this id");
+    throw new NotFoundError(404, "teacher not found with this id");
   }
   return res
     .status(200)
@@ -133,13 +144,13 @@ const resetPassword = async (req, res) => {
   const teacheruuid = req.body.teacheruuid;
 
   if (!teacheruuid) {
-    throw new ValidationError(500, "invalid details");
+    throw new ValidationError(400, "teacher id is required to reset password");
   }
   const findteacher = await TeacherModel.findOne({
     uniqueTeacherId: teacheruuid,
   });
   if (!findteacher) {
-    throw new ValidationError(500, "invalid details");
+    throw new ValidationError(404, "teacher not found");
   }
 
   if (req.body.password != " ") {
@@ -162,14 +173,14 @@ const ResetPasswordviaLink = async (req, res) => {
   //sendmail to the requested user mail id
   const { email } = req.body;
   if (!email || email.trim() == "") {
-    throw new ValidationError(500, "email is requried");
+    throw new ValidationError(400, "email is requried");
   }
 
   const findTeacherByEmail = await TeacherModel.findOne({ email });
   if (!findTeacherByEmail) {
-    throw new NotFoundError(500, "email is invalid");
+    throw new NotFoundError(404, "no user found with this id");
   }
-  const token = genrateToken(findTeacherByEmail.uniqueTeacherId, "teacher");
+  const token = genrateToken(findTeacher.uniqueTeacherId, "teacher", "3h");
 
   //send password reset link here
 
@@ -190,7 +201,7 @@ const GetTeacherByClass = async (req, res) => {
   const classid = req.params.classid;
   console.log(classid);
   if (!classid) {
-    throw new ValidationError(500, "class id is mandatory");
+    throw new ValidationError(400, "class id is mandatory");
   }
 
   const teachers = await TeacherModel.find(
@@ -199,7 +210,7 @@ const GetTeacherByClass = async (req, res) => {
   );
 
   if (!teachers) {
-    throw new NotFoundError(500, "no teachers present in this class");
+    throw new NotFoundError(404, "no teachers present in this class");
   }
 
   return res
@@ -210,7 +221,7 @@ const GetTeacherByClass = async (req, res) => {
 const MapTeacherToClass = async (req, res) => {
   const { teacheruuid, classes } = req.body;
   if (!classes || classes.length <= 0)
-    throw new ValidationError(500, "please provide class id");
+    throw new ValidationError(400, "please provide class id");
 
   const updateclasses = await TeacherModel.updateOne(
     { uniqueTeacherId: teacheruuid },
@@ -219,14 +230,14 @@ const MapTeacherToClass = async (req, res) => {
   );
 
   return res
-    .status(200)
+    .status(201)
     .json({ message: "classes mapped sucessfully", data: updateclasses });
 };
 
 const GetClassesByTeachersId = async (req, res) => {
   const teacheruuid = req.params.teacheruuid;
   if (!teacheruuid || !isValidText(teacheruuid)) {
-    throw new ValidationError(500, "teacher id required");
+    throw new ValidationError(400, "teacher id required");
   }
   const getclasses = await TeacherModel.findOne(
     {

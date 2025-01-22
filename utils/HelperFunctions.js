@@ -5,26 +5,18 @@ const nodemailer = require("nodemailer");
 const genrateUniqueId = () => {
   return uuidv4();
 };
+const genrateToken = (payload, to, time) => {
+  const keys = {
+    teacher: process.env.TEACHER_PRIVATE_KEY,
+    student: process.env.STUDENT_PRIVATE_KEY,
+    admin: process.env.ADMIN_PRIVATE_KEY,
+    default: process.env.DEFAULT_KEY,
+  };
 
-const genrateToken = (payload, to) => {
-  if (to === "teacher") {
-    const token = jwt.sign(
-      JSON.stringify(payload),
-      process.env.TEACHER_PRIVATE_KEY
-    );
-    return token;
-  }
-  if (to === "student") {
-    const token = jwt.sign(
-      JSON.stringify(payload),
-      process.env.STUDENT_PRIVATE_KEY
-    );
-    return token;
-  }
+  const secretKey = keys[to] || keys.default;
+  const uniqueid = `${to}uuid`;
 
-  const token = jwt.sign(JSON.stringify(payload), process.env.DEFAULT_KEY);
-
-  return token;
+  return jwt.sign({ [uniqueid]: payload }, secretKey, { expiresIn: time });
 };
 
 const isValidText = (data) => {

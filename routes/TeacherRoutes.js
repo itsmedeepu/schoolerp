@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const { TeacherAuth } = require("../middleware/Auth");
 const {
   RegisterTeacher,
   GetAllTeachers,
@@ -15,7 +16,7 @@ const {
 
 // router.get("/getclasses", GetClass);
 router.post("/addteacher", RegisterTeacher);
-router.get("/getallteachers", GetAllTeachers);
+router.get("/getallteachers", TeacherAuth, GetAllTeachers);
 router.get("/getteacherbyid/:teacheruuid", GetTeacherById);
 router.patch("/updateteacher", updateTeacher);
 router.post("/resetpassword", resetPassword);

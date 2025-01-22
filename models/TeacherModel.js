@@ -34,6 +34,11 @@ const TeacherSchema = mongoose.Schema({
     type: String,
     default: "",
   },
+  role: {
+    type: String,
+    enum: ["admin", "teacher", "student"],
+    default: "teacher",
+  },
 });
 
 const TeacherModel = mongoose.model("Teacher", TeacherSchema);
