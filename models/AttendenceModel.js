@@ -1,7 +1,7 @@
-const mongoose = require(".mongoose");
+const mongoose = require("mongoose");
 
 const AttendanceSchema = mongoose.Schema({
-  class: {
+  classid: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Class",
     required: true,
@@ -13,13 +13,13 @@ const AttendanceSchema = mongoose.Schema({
   },
   students: [
     {
-      studentId: {
+      studentid: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
       },
       status: {
         type: String,
-        enum: ["Present", "Absent", "Late", "Excused"],
+        enum: ["P", "A"],
         required: true,
       },
       remarks: {
@@ -27,8 +27,8 @@ const AttendanceSchema = mongoose.Schema({
       },
     },
   ],
-  teacher: {
-    type: mongoose.Schema.Types.ObjectId, // Reference to a Teacher model (if exists)
+  teacherid: {
+    type: mongoose.Schema.Types.ObjectId,
     ref: "Teacher",
     required: true,
   },

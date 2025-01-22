@@ -13,9 +13,13 @@ app.use(express.urlencoded({ extended: true }));
 const classRoutes = require("./routes/ClassesRoutes");
 const teacherRoutes = require("./routes/TeacherRoutes");
 const studentRoutes = require("./routes/StudentRoutes");
+const attendenceRoutes = require("./routes/AttendenceRoutes");
+const adminRoutes = require("./routes/AdminRoutes");
 app.use("/api/v1/school/class", classRoutes);
 app.use("/api/v1/school/teacher", teacherRoutes);
 app.use("/api/v1/school/student", studentRoutes);
+app.use("/api/v1/school/attendence", attendenceRoutes);
+app.use("/api/v1/school/admin", adminRoutes);
 // Test route
 app.get("/test", (req, res) => {
   res.status(200).json({ message: "Server running healthy" });
@@ -32,5 +36,9 @@ app.use((err, req, res, next) => {
 
 // Start server
 app.listen(port, () => {
-  console.log(`App running at http://localhost:${port}`);
+  if (process.env.ENVIRONMENT === "dev") {
+    console.log(`App running at dev envirnoment  http://localhost:${port}`);
+  } else {
+    console.log(`server started `);
+  }
 });
